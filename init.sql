@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS calls (
-    anum varchar(11),
-    bnum varchar(11),
+    anum bigint,
+    bnum bigint,
     timestamp timestamp
 );
