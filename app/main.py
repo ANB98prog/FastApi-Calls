@@ -6,6 +6,8 @@ from aiokafka import AIOKafkaProducer
 from core.config import settings
 from schemas import CallSchema, StatsRequestSchema, StatsResponseSchema
 from core.security import authenticate
+from contextlib import asynccontextmanager
+
 
 app = FastAPI(title="Kafka-Postgres API")
 
@@ -87,7 +89,6 @@ async def health_check():
             await connection.execute("SELECT 1;")
             health_status["postgres"] = "healthy"
     except Exception as e:
-        print(f"POSTGRESS: {e}")
         status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     # Проверка Kafka
@@ -96,7 +97,6 @@ async def health_check():
         await kafka_producer.client.fetch_all_metadata()
         health_status["kafka"] = "healthy"
     except Exception as e:
-        print(f"KAFFKA: {e}")
         status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     if status_code != status.HTTP_200_OK:
