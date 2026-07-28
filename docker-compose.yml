@@ -3,7 +3,7 @@ services:
     image: postgres:15-alpine
     container_name: postgres-db
     environment:
-      POSTGRES_USER: mguser
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: somepass
       POSTGRES_DB: callsdb
     ports:
@@ -11,7 +11,7 @@ services:
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mguser -d callsdb"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d callsdb"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -85,9 +85,9 @@ services:
           "config": {
             "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
             "tasks.max": "1",
-            "topics": "calls-topic",
+            "topics": "calls",
             "connection.url": "jdbc:postgresql://postgres:5432/callsdb",
-            "connection.user": "mguser",
+            "connection.user": "postgres",
             "connection.password": "somepass",
             "table.name.format": "calls",
             "insert.mode": "insert",
@@ -127,10 +127,10 @@ services:
     working_dir: /app
     environment:
       KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
-      KAFKA_TOPIC: "calls-topic"
-      DATABASE_URL: "postgresql://mguser:somepass@postgres:5432/callsdb"
-      API_LOGIN: "mg-user"
-      API_PASSWORD: "mg-password"
+      KAFKA_TOPIC: "calls"
+      DATABASE_URL: "postgresql://postgres:somepass@postgres:5432/callsdb"
+      API_LOGIN: "admin"
+      API_PASSWORD: "password"
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt && 
              uvicorn main:app --host 0.0.0.0 --port 8000 --reload"

@@ -1,39 +1,15 @@
 import json
-from typing import Optional, List
-from fastapi import FastAPI, Depends, HTTPException, status
-import asyncpg
-from aiokafka import AIOKafkaProducer
+from typing import List, Optional
+from main import *
 from core.config import settings
-from schemas import CallSchema, StatsRequestSchema, StatsResponseSchema
 from core.security import authenticate
+from fastapi import APIRouter, Depends, HTTPException, status
+from schemas import CallSchema, StatsRequestSchema, StatsResponseSchema
 
-app = FastAPI(title="Kafka-Postgres API")
-
-# Глобальные клиенты для пулов соединений
-kafka_producer: Optional[AIOKafkaProducer] = None
-pg_pool: Optional[asyncpg.Pool] = None
-
-# Жизненный цикл приложения (Управление подключениями)
-@app.on_event("startup")
-async def startup_event():
-    global kafka_producer, pg_pool
-    # Инициализация Kafka Producer
-    kafka_producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
-    await kafka_producer.start()
-    
-    # Инициализация пула соединений Postgres
-    pg_pool = await asyncpg.create_pool(settings.database_url)
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global kafka_producer, pg_pool
-    if kafka_producer:
-        await kafka_producer.stop()
-    if pg_pool:
-        await pg_pool.close()
+router = APIRouter()
 
 # Эндпоинт 1: Отправка call в Kafka
-@app.post("/calls", status_code=status.HTTP_201_CREATED, dependencies=[Depends(authenticate)])
+@router.post("/calls", status_code=status.HTTP_201_CREATED, dependencies=[Depends(authenticate)])
 async def create_call(call: CallSchema):
     payload = call.to_kafka_connect_json()
     # Конвертируем в json-строку и байты для отправки в топик
@@ -46,7 +22,7 @@ async def create_call(call: CallSchema):
         raise HTTPException(status_code=500, detail=f"Failed to send to Kafka: {str(e)}")
 
 # Эндпоинт 2: Агрегация статистики из Postgres
-@app.post("/stats", response_model=List[StatsResponseSchema], dependencies=[Depends(authenticate)])
+@router.post("/stats", response_model=List[StatsResponseSchema], dependencies=[Depends(authenticate)])
 async def get_stats(filters: Optional[StatsRequestSchema] = None):
     # Если тело запроса пустое илиanum не передан
     if not filters or not filters.anum:
@@ -76,7 +52,7 @@ async def get_stats(filters: Optional[StatsRequestSchema] = None):
         return [{"anum": row["anum"], "cnt": row["cnt"]} for row in rows]
 
 # Эндпоинт 3: Проверка здоровья (Health Check)
-@app.post("/health")
+@router.post("/health")
 async def health_check():
     health_status = {"postgres": "unhealthy", "kafka": "unhealthy"}
     status_code = status.HTTP_200_OK
