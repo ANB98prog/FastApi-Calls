@@ -6,7 +6,6 @@ from aiokafka import AIOKafkaProducer
 from core.config import settings
 from schemas import CallSchema, StatsRequestSchema, StatsResponseSchema
 from core.security import authenticate
-from contextlib import asynccontextmanager
 
 
 app = FastAPI(title="Kafka-Postgres API")
